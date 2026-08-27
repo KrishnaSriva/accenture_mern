@@ -1,0 +1,30 @@
+{
+  "name": "kpi-storytelling-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KPI Storytelling Engine — backend (Express + TypeScript + MongoDB)",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "seed": "ts-node --transpile-only src/seed/seed.ts",
+    "embed": "ts-node --transpile-only src/seed/embed.ts",
+    "test": "node --require ts-node/register/transpile-only --test src/engine/engine.test.ts src/engine/insight.test.ts src/ingest/ingest.test.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.6.0",
+    "openai": "^4.56.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-gradient-to-br from-slate-900 via-[#1e1b4b] to-black text-ink font-sans min-h-screen bg-fixed;
+  }
+  /* tabular figures everywhere numbers matter */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-surface backdrop-blur-xl border border-hairline rounded-2xl shadow-panel;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand/80 px-4 py-2
+           text-sm font-semibold text-white transition backdrop-blur-md border border-white/10
+           hover:bg-brand focus:outline-none focus:ring-2 focus:ring-brand/40
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .select {
+    @apply w-full rounded-lg border border-hairline bg-surface backdrop-blur-md px-3 py-2 text-sm font-medium
+           text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 [&>option]:bg-slate-900 [&>option]:text-white;
+  }
+}
+
+/* confidence meter fill */
+.meter-fill {
+  transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: rise 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .meter-fill {
+    animation: none;
+    transition: none;
+  }
+}
