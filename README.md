@@ -27,7 +27,7 @@ Prerequisites: **Python 3** (numpy, pandas), **Node 18+**, and **MongoDB** runni
 ### 1) Generate the seed data (deterministic, offline)
 
 ```bash
-cd kpi-storytelling
+cd accenture_mern
 python scripts/generate_data.py
 python scripts/verify_data.py        # proves the demo story holds (statistical checks)
 python scripts/verify_engine.py      # proves the ENGINE verdicts hold (EMEA→Confirmed, APAC→Ambiguous)
@@ -37,7 +37,7 @@ python scripts/verify_engine.py      # proves the ENGINE verdicts hold (EMEA→C
 
 ```bash
 cd server
-cp .env.example .env                 # optional: set OPENAI_API_KEY for AI narration; edit Mongo URI if needed
+cp .env.example .env                 # all keys optional; Gemini has a free tier, or leave blank
 npm install
 npm run seed                         # wipes + loads data/generated/*.json into MongoDB
 npm run embed                        # builds document embeddings (OpenAI if key set, else offline hashing)
@@ -63,8 +63,9 @@ Open http://localhost:5173. It auto-loads the **EMEA · Nov 2025** story; the si
 **company switcher**, a **Connect a company** box (ticker → live data), both demo scenarios, and
 a **Scan** button that ranks every region for the selected metric/period.
 
-> **No OpenAI key?** Everything still works. Embeddings fall back to a deterministic offline
-> method and narration falls back to a deterministic template. A key only upgrades the prose.
+> **No API key?** Everything still works. Embeddings fall back to a deterministic offline
+> method and narration falls back to a deterministic template. A key only upgrades the prose —
+> set `GEMINI_API_KEY` (free tier) or `OPENAI_API_KEY` (paid); Gemini wins if both are present.
 
 ## Connect a real company (live data)
 
@@ -125,30 +126,76 @@ works with no changes.
 ## How the analysis works
 
 ```
-detect anomaly  →  decompose drivers  →  retrieve evidence  →  score confidence  →  build story
-  (modified z on      (category/segment/      (theme spikes vs      (structured ↔          (structured facts;
-   month-over-month     software·physical,      12-mo baseline;       unstructured           LLM only narrates,
-   % change series)     price-volume bridge,    embedding/lexical     agreement; caps        never invents)
-                        churn-by-reason)        doc ranking)          confidence when
-                                                                      cause unconfirmed)
+detect anomaly  →  decompose drivers  →  retrieve evidence  →  score confidence  →  rank hypotheses
+  (modified z on      (category/segment/      (theme spikes vs      (structured ↔        (every cause the data
+   month-over-month     software·physical,      12-mo baseline;       unstructured         could support, each with
+   % change series)     price-volume bridge,    embedding/lexical     agreement; caps      the test that would
+                        churn-by-reason;        doc ranking)          confidence when      disconfirm it)
+                        margin bridge and                            cause unconfirmed)
+                        segment mix for
+                        reported totals)
+        ↓
+validate a forecast  →  gate a recovery scenario  →  build an action plan  →  narrate  →  audit trail
+  (rolling-origin          (open only when a cause      (owner, time-to-signal,   (LLM only    (every figure,
+   backtest picks the       is confirmed AND a driver     falsifiable check, and    rewrites     its formula,
+   method and sizes the     was actually sized)           the measured amount       the facts)   and the rows
+   interval — or refuses)                                 each action addresses)                 it came from)
 ```
 
 The **confidence** score is about explaining the *cause*, not just locating the change. When a
 move is a real outlier but nothing corroborates a cause (no theme spike, no churn), the engine
 **caps confidence and flags ambiguity** — that is the APAC case, and it is the honesty guarantee.
+Evidence that only *locates* a change cannot lift the score past 62; external news alone cannot
+lift it past 44.
+
+### The forecast refuses more often than it draws
+
+A dashboard that extrapolates a low-confidence series is the failure mode this project exists to
+fix, so nothing forward-looking is drawn unless the server proved it first:
+
+- Four candidate methods (carry-forward, drift, seasonal naive, seasonal drift) compete in a
+  **rolling-origin backtest**; the winner is the one with the lowest out-of-sample median APE.
+- The published band is the **empirical 80% interval** taken from that method's own backtest
+  errors — not a formula, and widened by √h where a horizon had too few folds to measure.
+- The horizon is capped by the data (`floor(n/4)`, never more than 3), the drift is clamped, and
+  coverage is checked walk-forward against the 80% target.
+- It **declines** on fewer than 8 periods, on an irregular calendar, and when one-step error
+  exceeds 20% — and prints the reason where the line would have been.
+
+### The recovery slider is gated, not decorative
+
+The slider moves a share of a **loss the driver decomposition actually measured** onto the
+validated baseline. It is disabled with a written reason when there is no forecast to move, when
+the move was favourable, when the cause is only a leading hypothesis rather than a confirmed one,
+or when no driver could be sized. `formula` and `basis` are shown alongside it.
+
+### Show the math
+
+Every figure in the story has an entry in the **audit trail**: the question it answers, the
+method, the formula, each input with the collection it came from, and the result — or, where the
+engine declined, the reason it withheld one. This is what makes the claim "the LLM never invents a
+number" checkable rather than asserted.
 
 ## Tests
 
 ```bash
 cd server
-npm test        # pure-logic unit tests, no DB/network required
+npm test                      # pure-logic unit tests, no DB/network required
+
+# or, with zero dependencies installed (needs Node >= 22.6):
+bash scripts/test_no_install.sh
 ```
 
-Covers the engine's robust stats + confidence contract (EMEA→Confirmed, APAC→Ambiguous) and the
-live connectors: the FMP / NewsAPI / GNews normalizers are exercised against real-shaped fixtures,
-and connector output is fed through the real confidence scorer to prove a bug-news cluster yields a
-**confirmed** story while generic news stays **ambiguous**. The end-to-end pipeline against the
-seed data is proven by `scripts/verify_engine.py`.
+74 tests, no database, no network, no API key. They cover the robust stats and the confidence
+contract (EMEA→Confirmed, APAC→Ambiguous); the forecast's **refusals** as hard as its outputs;
+each of the recovery scenario's four gates; the action plan degrading to experiments under
+ambiguity and to data collection when nothing ranks; the confidence ceilings; and a
+**client/server contract suite** that reads `client/src/types.ts` and asserts every field the
+dashboard renders is really present on the objects the engine builds. The live connectors are
+exercised against real-shaped fixtures, and connector output is fed through the real confidence
+scorer to prove a bug-news cluster yields a **confirmed** story while generic news stays
+**ambiguous**. The end-to-end pipeline against the seed data is proven by
+`scripts/verify_engine.py`.
 
 ## Bringing in your own raw files
 
@@ -159,12 +206,16 @@ layer are synthesized by `scripts/generate_data.py` regardless, so the DEMO stor
 ## Layout
 
 ```
-kpi-storytelling/
+accenture_mern/
   scripts/        generate_data.py, verify_data.py, verify_engine.py   (offline generation + checks)
+                  test_no_install.sh                                   (unit tests, zero npm install)
   data/generated/ *.json                               (seed data)
   data/raw/       (drop real exports here)
-  server/         Express + TS API, Mongoose models, engine (anomaly, drivers, retrieval,
-                  confidence, story, pipeline), ingest connectors (themes, fmp, news, gnews,
-                  connect), seed + embed loaders, unit tests
-  client/         React + TS + Tailwind dashboard (company switcher + Connect box)
+  server/         Express + TS API, Mongoose models, engine (stats, anomaly, drivers, aggregate,
+                  retrieval, confidence, hypotheses, forecast, scenario, actions, provenance,
+                  story, pipeline), ingest connectors (themes, fmp, news, gnews, connect),
+                  seed + embed loaders, unit tests
+  client/         React + TS + Tailwind dashboard — chart with validated forecast band, story card,
+                  confidence breakdown, hypothesis ledger, outlook + gated recovery scenario,
+                  quantified action plan, evidence list, audit trail
 ```

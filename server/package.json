@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "seed": "ts-node --transpile-only src/seed/seed.ts",
     "embed": "ts-node --transpile-only src/seed/embed.ts",
-    "test": "node --require ts-node/register/transpile-only --test src/engine/engine.test.ts src/engine/insight.test.ts src/ingest/ingest.test.ts"
+    "test": "node --require ts-node/register/transpile-only --test src/engine/engine.test.ts src/engine/insight.test.ts src/engine/outlook.test.ts src/engine/contract.test.ts src/ingest/ingest.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

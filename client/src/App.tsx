@@ -8,6 +8,9 @@ import ConfidenceBadge from "./components/ConfidenceBadge";
 import ContributorBars from "./components/ContributorBars";
 import HypothesisLedgerPanel from "./components/HypothesisLedgerPanel";
 import EvidenceList from "./components/EvidenceList";
+import OutlookPanel from "./components/OutlookPanel";
+import ActionPlanPanel from "./components/ActionPlanPanel";
+import AuditTrail from "./components/AuditTrail";
 
 export default function App() {
   const [kpis, setKpis] = useState<Kpi[]>([]);
@@ -27,7 +30,10 @@ export default function App() {
   const [kpi, setKpi] = useState("revenue");
   const [region, setRegion] = useState("EMEA");
   const [period, setPeriod] = useState("2025-11");
-  const [remediationEffort, setRemediationEffort] = useState(0);
+  // Share of the ATTRIBUTED loss the user wants to model recovering. It is not an
+  // "effort" dial: it can only move a baseline the server validated, by an amount the
+  // driver decomposition measured, and only when the scenario gate is open.
+  const [recoveryShare, setRecoveryShare] = useState(0);
 
   const [data, setData] = useState<AnalysisPayload | null>(null);
   const [scanRows, setScanRows] = useState<AnomalyResult[] | null>(null);
@@ -53,6 +59,13 @@ export default function App() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A scenario is specific to one analysis. Carrying a share across a change of KPI,
+  // region, or period would draw a recovery line for a loss that was never attributed
+  // in the new context, so every fresh payload starts the dial at zero.
+  useEffect(() => {
+    setRecoveryShare(0);
+  }, [data]);
 
   // load a company's catalogs, pick sensible defaults, and run the first analysis
   async function loadCompany(code: string) {
@@ -203,25 +216,29 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {/* header */}
-      <header className="border-b border-hairline bg-black/20 backdrop-blur-xl sticky top-0 z-50">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand font-display text-base font-bold text-white shadow-[0_0_16px_rgba(129,140,248,0.4)] ring-1 ring-white/20">
+      <header className="border-b border-hairline bg-black/30 backdrop-blur-xl sticky top-0 z-50">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand font-display text-sm font-bold text-white ring-1 ring-white/20">
               SR
             </div>
             <div>
-              <div className="font-display text-xl font-bold leading-none tracking-tight text-white drop-shadow-sm">Signal Room</div>
-              <div className="text-[11px] font-medium tracking-wide text-brand/80 uppercase mt-1">KPI Storytelling Engine</div>
+              <div className="font-display text-lg font-bold leading-none tracking-tight text-white">Signal Room</div>
+              <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-brand/80">
+                KPI Storytelling Engine
+              </div>
             </div>
           </div>
-          <div className="hidden text-right text-xs text-muted sm:block">
-            <div className="font-mono text-sm font-bold text-white">{companyName}</div>
-            <div className="mt-0.5">{company === "DEMO" ? "synthetic demo tenant" : "live data · connected company"}</div>
+          <div className="text-right text-xs text-muted">
+            <div className="font-mono text-sm font-semibold text-white">{companyName}</div>
+            <div className="mt-0.5 hidden sm:block">
+              {company === "DEMO" ? "synthetic demo tenant" : "live data · connected company"}
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+      <main className="mx-auto max-w-7xl px-4 py-5 space-y-5 sm:px-6 sm:py-6 sm:space-y-6">
         <Controls
           kpis={kpis}
           regions={regions}
@@ -245,13 +262,27 @@ export default function App() {
           onDemo={onDemo}
         />
 
-        <section className="space-y-6">
+        <section className="space-y-5 sm:space-y-6">
           {error && (
-            <div className="panel border-down/30 bg-down/5 p-4 text-sm text-down">{error}</div>
+            <div className="panel border-down/30 bg-down/5 p-4 text-sm text-down" role="alert">
+              {error}
+            </div>
           )}
 
-          {!error && !data && !booted && (
-            <div className="panel p-10 text-center text-sm text-muted">Loading Signal Room…</div>
+          {/* Boot and re-analysis both take a visible moment because the engine does real
+              work — a backtest, a decomposition, a ledger. Before there is anything to
+              show, a skeleton in the shape of the result; once there is, the previous
+              answer stays on screen and dims rather than flashing away. */}
+          {!error && !data && (!booted || loading) && <Skeleton />}
+
+          {booted && !loading && !error && !data && (
+            <div className="panel p-10 text-center">
+              <div className="font-display text-lg font-semibold text-white">Nothing to analyse yet</div>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+                Pick a KPI, region, and period above — or connect a public company by ticker to run the same engine over
+                its filings and news.
+              </p>
+            </div>
           )}
 
           {/* scan strip */}
@@ -284,39 +315,55 @@ export default function App() {
           )}
 
           {data && (
-            <>
+            <div
+              className={`space-y-5 transition-opacity duration-200 sm:space-y-6 ${
+                loading ? "pointer-events-none opacity-40" : "opacity-100"
+              }`}
+              aria-busy={loading}
+            >
               {/* chart */}
-              <div className="panel rise p-5 relative overflow-hidden group">
-                {/* Glow effect behind chart */}
-                <div className="absolute -inset-20 bg-brand/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <div className="relative z-10 flex items-center justify-between">
+              <div className="panel rise p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div className="eyebrow">
                     {companyName} · {data.meta.name} · {regionName}
                   </div>
-                  <div className="font-mono text-xs text-brand">flagged: {data.change.period}</div>
+                  <div className="font-mono text-[11px] text-muted">
+                    flagged <span className="text-brand">{data.change.period}</span>
+                    {data.forecast.available ? (
+                      <span> · forecast +{data.forecast.horizon} {data.forecast.grain}</span>
+                    ) : (
+                      <span className="text-warn"> · no forecast drawn</span>
+                    )}
+                  </div>
                 </div>
-                <div className="relative z-10 mt-2">
+                <div className="mt-2">
                   <KpiChart
                     series={data.change.series}
                     anomalyPeriod={data.change.period}
                     direction={data.change.direction}
                     unit={data.meta.unit}
-                    effort={remediationEffort}
+                    forecast={data.forecast}
+                    scenario={data.scenario}
+                    recoveryShare={recoveryShare / 100}
                   />
                 </div>
               </div>
 
               {/* story + confidence/drivers */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                  <StoryCard 
-                    data={data} 
-                    effort={remediationEffort} 
-                    onEffortChange={setRemediationEffort} 
-                  />
+                <div className="lg:col-span-2 space-y-6">
+                  <StoryCard data={data} />
+                  <ActionPlanPanel plan={data.action_plan} />
                 </div>
                 <div className="space-y-6">
                   <ConfidenceBadge confidence={data.confidence} />
+                  <OutlookPanel
+                    forecast={data.forecast}
+                    scenario={data.scenario}
+                    plan={data.action_plan}
+                    share={recoveryShare}
+                    onShareChange={setRecoveryShare}
+                  />
                   <ContributorBars drivers={data.drivers} aggregate={data.aggregate} />
                 </div>
               </div>
@@ -326,15 +373,57 @@ export default function App() {
 
               {/* evidence */}
               <EvidenceList evidence={data.evidence} />
-            </>
+
+              {/* every number, traced back to its arithmetic */}
+              {data.provenance && <AuditTrail provenance={data.provenance} />}
+            </div>
           )}
         </section>
 
-        <footer className="mt-10 border-t border-hairline pt-4 text-center text-xs text-muted">
-          Numbers, drivers, and evidence are computed deterministically. The language model only narrates from those
-          facts — it never invents figures or causes.
+        <footer className="mt-10 border-t border-hairline pt-4 text-center text-xs leading-relaxed text-muted">
+          Numbers, drivers, forecasts, and evidence are computed deterministically. The language model only narrates
+          from those facts — it never invents a figure, a cause, or a projection.
         </footer>
       </main>
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="space-y-5 sm:space-y-6" aria-busy="true" aria-label="Running the analysis">
+      <div className="panel p-5">
+        <div className="h-3 w-48 rounded bg-white/10 shimmer" />
+        <div className="mt-4 h-48 rounded-lg bg-white/[0.04]" />
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="panel space-y-3 p-6 lg:col-span-2">
+          <div className="h-3 w-32 rounded bg-white/10 shimmer" />
+          <div className="h-5 w-3/4 rounded bg-white/10 shimmer" />
+          <div className="h-9 w-40 rounded bg-white/10 shimmer" />
+          <div className="space-y-2 pt-3">
+            <div className="h-2.5 w-full rounded bg-white/[0.07] shimmer" />
+            <div className="h-2.5 w-11/12 rounded bg-white/[0.07] shimmer" />
+            <div className="h-2.5 w-4/5 rounded bg-white/[0.07] shimmer" />
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div className="panel space-y-3 p-5">
+            <div className="h-3 w-28 rounded bg-white/10 shimmer" />
+            <div className="h-7 w-36 rounded bg-white/10 shimmer" />
+            <div className="h-2 w-full rounded-full bg-white/[0.07] shimmer" />
+          </div>
+          <div className="panel space-y-3 p-5">
+            <div className="h-3 w-24 rounded bg-white/10 shimmer" />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="h-14 rounded-lg bg-white/[0.05] shimmer" />
+              <div className="h-14 rounded-lg bg-white/[0.05] shimmer" />
+              <div className="h-14 rounded-lg bg-white/[0.05] shimmer" />
+              <div className="h-14 rounded-lg bg-white/[0.05] shimmer" />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

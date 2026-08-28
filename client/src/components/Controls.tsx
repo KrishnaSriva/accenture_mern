@@ -93,6 +93,7 @@ export default function Controls(p: Props) {
         <div className="eyebrow">Analyze a KPI move</div>
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted">Metric</span>
             <select className="select" value={p.kpi} onChange={(e) => p.onKpi(e.target.value)}>
               {p.kpis.map((k) => (
                 <option key={k.key} value={k.key}>
@@ -103,6 +104,7 @@ export default function Controls(p: Props) {
           </label>
 
           <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted">Region</span>
             <select className="select" value={p.region} onChange={(e) => p.onRegion(e.target.value)}>
               {p.regions.map((r) => (
                 <option key={r.code} value={r.code}>
@@ -113,6 +115,7 @@ export default function Controls(p: Props) {
           </label>
 
           <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted">Period</span>
             <select className="select" value={p.period} onChange={(e) => p.onPeriod(e.target.value)}>
               {p.periods.map((pd) => (
                 <option key={pd} value={pd}>

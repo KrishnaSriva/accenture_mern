@@ -115,12 +115,23 @@ export interface RetrievalResult {
   doc_count: number;
 }
 
+export interface ConfidenceComponent {
+  id: string;
+  label: string;
+  points: number;
+  max: number;
+  detail: string;
+}
+
 export interface Confidence {
   score: number;
   label: "High" | "Medium" | "Low";
   reasons: string[];
   aligned_theme: string | null;
   ambiguity: { flag: boolean; reasons: string[] };
+  components: ConfidenceComponent[];
+  subtotal: number;
+  ceiling: { applied: boolean; value: number | null; reason: string | null };
 }
 
 /* ------------------------------- aggregate drivers (reported totals) ------- */
@@ -272,6 +283,172 @@ export interface Story {
   narrative: string;
 }
 
+/* ------------------------------------------------- outlook (validated) ----- */
+// Mirrors server/src/engine/forecast.ts. Nothing here is drawn unless
+// `available` is true — a refusal carries the reason instead of a line.
+
+export type ForecastMethod = "carry_forward" | "drift" | "seasonal_naive" | "seasonal_drift";
+
+export interface ForecastPoint {
+  period: string;
+  horizon: number;
+  value: number;
+  lo: number;
+  hi: number;
+  half_width_pct: number;
+}
+
+export interface HorizonAccuracy {
+  horizon: number;
+  folds: number;
+  median_ape: number;
+  naive_median_ape: number;
+  skill: number;
+  half_width_pct: number;
+  widened_from_h1: boolean;
+}
+
+export interface CandidateScore {
+  method: ForecastMethod;
+  label: string;
+  median_ape: number | null;
+  folds: number;
+  eligible: boolean;
+  note?: string;
+}
+
+export interface Backtest {
+  scheme: string;
+  origins: number;
+  min_train: number;
+  by_horizon: HorizonAccuracy[];
+  median_ape: number | null;
+  naive_median_ape: number | null;
+  skill: number | null;
+  beats_naive: boolean;
+  median_bias_pct: number | null;
+  coverage: number | null;
+  coverage_checks: number;
+  target_coverage: number;
+  candidates: CandidateScore[];
+}
+
+export interface Forecast {
+  available: boolean;
+  refusal: string | null;
+  method: ForecastMethod | null;
+  method_label: string | null;
+  grain: "month" | "quarter" | "annual" | "unknown";
+  step_months: number | null;
+  anchor_period: string | null;
+  anchor_value: number | null;
+  horizon: number;
+  interval_pct: number;
+  points: ForecastPoint[];
+  backtest: Backtest | null;
+  drift_per_period_pct: number | null;
+  seasonal_available: boolean;
+  notes: string[];
+}
+
+/* ------------------------------------------------ recovery scenario -------- */
+// Mirrors server/src/engine/scenario.ts. `gate` says why a scenario is withheld.
+
+export type ScenarioGate =
+  | "open"
+  | "no_forecast"
+  | "favourable_move"
+  | "cause_unconfirmed"
+  | "no_quantified_driver";
+
+export interface RecoveryScenario {
+  available: boolean;
+  gate: ScenarioGate;
+  reason: string | null;
+  attributed_to: string | null;
+  mechanism: string | null;
+  recoverable: number;
+  total_move: number | null;
+  share_of_move_pct: number | null;
+  unit: string;
+  basis: string;
+  ramp: number[];
+  ramp_label: string;
+  formula: string;
+  full_recovery_endpoint: number | null;
+  baseline_endpoint: number | null;
+}
+
+/* ---------------------------------------------------- action plan ---------- */
+// Mirrors server/src/engine/actions.ts.
+
+export type ActionKind = "test" | "remedy" | "escalation" | "containment" | "data" | "monitor";
+export type Posture = "act" | "test_first" | "gather_data" | "stand_down";
+
+export interface ActionImpact {
+  value: number;
+  unit: string;
+  kind: "recoverable" | "at_risk" | "unquantified";
+  basis: string;
+}
+
+export interface PlannedAction {
+  priority: number;
+  kind: ActionKind;
+  action: string;
+  owner: string;
+  time_to_signal: string;
+  impact: ActionImpact | null;
+  check: string;
+  serves: string | null;
+}
+
+export interface ActionPlan {
+  posture: Posture;
+  posture_reason: string;
+  unit: string;
+  addressable: ActionImpact | null;
+  actions: PlannedAction[];
+}
+
+/* ------------------------------------------------------ provenance --------- */
+// Mirrors server/src/engine/provenance.ts — the show-the-math audit trail.
+
+export interface ComputationInput {
+  name: string;
+  value: string;
+  source: string;
+}
+
+export interface Computation {
+  id: string;
+  question: string;
+  method: string;
+  formula: string | null;
+  inputs: ComputationInput[];
+  result: string;
+  withheld: string | null;
+}
+
+export interface ProvenanceSection {
+  id: string;
+  title: string;
+  purpose: string;
+  computations: Computation[];
+}
+
+export interface Provenance {
+  llm_role: string;
+  guarantees: string[];
+  counts: {
+    kpi_periods: number;
+    order_level_rows: boolean;
+    documents: number;
+    hypotheses_scored: number;
+  };
+  sections: ProvenanceSection[];
+}
+
 export interface AnalysisPayload {
   company: string;
   kpi_key: string;
@@ -284,5 +461,9 @@ export interface AnalysisPayload {
   evidence: RetrievalResult;
   confidence: Confidence;
   ledger: HypothesisLedger;
+  forecast: Forecast;
+  scenario: RecoveryScenario;
+  action_plan: ActionPlan;
+  provenance: Provenance;
   story: Story;
 }

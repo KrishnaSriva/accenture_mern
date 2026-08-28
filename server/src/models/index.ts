@@ -186,6 +186,10 @@ const analysisResultSchema = new Schema(
     confidence: Schema.Types.Mixed,   // {score, label, reasons}
     ambiguity: Schema.Types.Mixed,
     ledger: Schema.Types.Mixed,       // ranked competing hypotheses + disconfirming tests
+    forecast: Schema.Types.Mixed,     // backtested baseline + empirical intervals (or refusal)
+    scenario: Schema.Types.Mixed,     // gated recovery arithmetic (or the reason it was withheld)
+    action_plan: Schema.Types.Mixed,  // owned, quantified, falsifiable next steps
+    provenance: Schema.Types.Mixed,   // show-the-math audit trail
     story: Schema.Types.Mixed,        // structured narrative
     created_at: { type: Date, default: Date.now },
   },

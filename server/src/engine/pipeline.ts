@@ -3,12 +3,16 @@
  *
  *   detect anomaly  →  decompose drivers (order-level)  →  decompose totals
  *                   →  retrieve evidence  →  score confidence
- *                   →  rank hypotheses    →  build story  →  persist
+ *                   →  rank hypotheses    →  validate a forecast
+ *                   →  gate a recovery scenario  →  build an action plan
+ *                   →  record the audit trail    →  build story  →  persist
  *
  * Deterministic order: drivers are computed first so we can point retrieval at the
  * theme that matches the structured driver (e.g. software drop → software_bug),
  * then confidence weighs how well structured + unstructured signals agree, and the
- * hypothesis ledger ranks every cause the combined evidence could support.
+ * hypothesis ledger ranks every cause the combined evidence could support. Only
+ * after the ledger has ruled does anything forward-looking get built, because the
+ * ruling is what decides whether a recovery path may be offered at all.
  */
 import { Kpi, AnalysisResult } from "../models";
 import { detect, scan, AnomalyResult } from "./anomaly";
@@ -17,6 +21,10 @@ import { analyzeAggregate, AggregateDrivers } from "./aggregate";
 import { retrieveEvidence, RetrievalResult } from "./retrieval";
 import { scoreConfidence, Confidence } from "./confidence";
 import { buildLedger, HypothesisLedger } from "./hypotheses";
+import { buildForecast, Forecast } from "./forecast";
+import { buildScenario, RecoveryScenario } from "./scenario";
+import { buildActionPlan, ActionPlan } from "./actions";
+import { buildProvenance, Provenance } from "./provenance";
 import { buildStory, Story, KpiMeta } from "./story";
 
 const SOFTWARE_KEY = "Software (subscription)";
@@ -33,6 +41,10 @@ export interface AnalysisPayload {
   evidence: RetrievalResult;
   confidence: Confidence;
   ledger: HypothesisLedger;
+  forecast: Forecast;
+  scenario: RecoveryScenario;
+  action_plan: ActionPlan;
+  provenance: Provenance;
   story: Story;
 }
 
@@ -130,8 +142,47 @@ export async function analyze(
   // disconfirm each. This is what turns a correlation into a decision.
   const ledger = buildLedger({ meta, anomaly: change, drivers, aggregate, retrieval: evidence });
 
-  // 6) narrate
-  const story = await buildStory(meta, change, drivers, evidence, confidence, { aggregate, ledger });
+  // 6) what happens next — but only if a model can prove itself on this series.
+  // The anchor being an outlier is passed through so the baseline can say out loud
+  // that it assumes the new level persists.
+  const forecast = buildForecast(change.series, { anchorIsOutlier: change.is_anomaly });
+
+  // 7) the recovery path, gated on the ruling above. An unconfirmed cause gets a
+  // written refusal instead of a line that bends upward.
+  const scenario = buildScenario({ meta, anomaly: change, drivers, aggregate, confidence, ledger, forecast });
+
+  // 8) what to do, with an owner, a measured amount, and a falsifiable check.
+  const action_plan = buildActionPlan({
+    meta,
+    anomaly: change,
+    drivers,
+    aggregate,
+    confidence,
+    ledger,
+    scenario,
+  });
+
+  // 9) narrate — the recommended actions come from the plan, so the prose and the
+  // action panel can never drift apart.
+  const story = await buildStory(meta, change, drivers, evidence, confidence, {
+    aggregate,
+    ledger,
+    plan: action_plan,
+  });
+
+  // 10) the audit trail for every figure above.
+  const provenance = buildProvenance({
+    meta,
+    company,
+    anomaly: change,
+    drivers,
+    aggregate,
+    retrieval: evidence,
+    confidence,
+    ledger,
+    forecast,
+    scenario,
+  });
 
   // 7) persist (one row per company/kpi/region/period; latest wins)
   await AnalysisResult.findOneAndUpdate(
@@ -171,6 +222,10 @@ export async function analyze(
       confidence: { score: confidence.score, label: confidence.label, reasons: confidence.reasons },
       ambiguity: confidence.ambiguity,
       ledger,
+      forecast,
+      scenario,
+      action_plan,
+      provenance,
       story,
       created_at: new Date(),
     },
@@ -189,6 +244,10 @@ export async function analyze(
     evidence,
     confidence,
     ledger,
+    forecast,
+    scenario,
+    action_plan,
+    provenance,
     story,
   };
 }

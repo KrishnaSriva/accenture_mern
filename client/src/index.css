@@ -8,11 +8,22 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-gradient-to-br from-slate-900 via-[#1e1b4b] to-black text-ink font-sans min-h-screen bg-fixed;
+    /* A quieter version of the same dark indigo: two soft radial washes over a near
+       black canvas instead of a full-page gradient, so panels read as the brightest
+       thing on screen rather than competing with the background. */
+    @apply bg-canvas text-ink font-sans min-h-screen;
+    background-image:
+      radial-gradient(60rem 40rem at 12% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
+      radial-gradient(50rem 34rem at 100% 0%, rgba(56, 189, 248, 0.08), transparent 55%);
+    background-attachment: fixed;
+    letter-spacing: -0.005em;
   }
   /* tabular figures everywhere numbers matter */
   .font-mono {
     font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: rgba(129, 140, 248, 0.35);
   }
 }
 
@@ -21,17 +32,17 @@
     @apply bg-surface backdrop-blur-xl border border-hairline rounded-2xl shadow-panel;
   }
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
+    @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-muted;
   }
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand/80 px-4 py-2
            text-sm font-semibold text-white transition backdrop-blur-md border border-white/10
-           hover:bg-brand focus:outline-none focus:ring-2 focus:ring-brand/40
+           hover:bg-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .select {
     @apply w-full rounded-lg border border-hairline bg-surface backdrop-blur-md px-3 py-2 text-sm font-medium
-           text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 [&>option]:bg-slate-900 [&>option]:text-white;
+           text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 [&>option]:bg-slate-900 [&>option]:text-white;
   }
 }
 
@@ -54,9 +65,40 @@
   animation: rise 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* loading placeholders — a slow sweep, not a pulse, so a slow analysis doesn't blink */
+@keyframes shimmer {
+  0% {
+    background-position: -180% 0;
+  }
+  100% {
+    background-position: 180% 0;
+  }
+}
+.shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.07) 45%,
+    transparent 90%
+  );
+  background-size: 180% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* the slider is a quantitative control, so give it a quantitative look */
+input[type="range"] {
+  height: 1.5rem;
+}
+input[type="range"]:focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.6);
+  outline-offset: 4px;
+  border-radius: 0.25rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise,
-  .meter-fill {
+  .meter-fill,
+  .shimmer {
     animation: none;
     transition: none;
   }

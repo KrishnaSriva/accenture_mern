@@ -24,7 +24,10 @@ import {
   type PnL,
 } from "./aggregate";
 import { buildLedger, type LedgerInput } from "./hypotheses";
-import { buildStory } from "./story";
+import { buildStory, type KpiMeta } from "./story";
+import { buildForecast, periodIndex, periodFromIndex } from "./forecast";
+import { buildScenario } from "./scenario";
+import { buildActionPlan } from "./actions";
 import type { AnomalyResult, Point } from "./anomaly";
 import type { DriverResult } from "./drivers";
 import type { RetrievalResult } from "./retrieval";
@@ -266,6 +269,55 @@ const EMPTY_AGG: AggregateDrivers = {
 };
 
 const META = { name: "Revenue", unit: "USD", higher_is_better: true };
+const KPI: KpiMeta = { key: "revenue", ...META };
+
+/**
+ * A real calendar for the fixtures. The forecast layer refuses to work on invented
+ * period labels, so a fixture with "p0, p1, p2" periods would silently exercise the
+ * refusal path and never reach the scenario gates these tests are about.
+ */
+function seriesBack(n: number, last: string, step: number, value: (i: number) => number): Point[] {
+  const end = periodIndex(last) as number;
+  return Array.from({ length: n }, (_, i) => ({
+    period: periodFromIndex(end - (n - 1 - i) * step),
+    value: value(i),
+  }));
+}
+
+/**
+ * The whole downstream chain for one fixture, in pipeline order. Building it here
+ * (rather than hand-writing a plan) is deliberate: these tests then prove that the
+ * narrative, the scenario gate and the action plan agree with each other.
+ */
+async function chain(i: LedgerInput) {
+  const confidence = scoreConfidence(i.anomaly, i.drivers, i.retrieval, i.aggregate);
+  const ledger = buildLedger(i);
+  const forecast = buildForecast(i.anomaly.series, { anchorIsOutlier: i.anomaly.is_anomaly });
+  const scenario = buildScenario({
+    meta: KPI,
+    anomaly: i.anomaly,
+    drivers: i.drivers,
+    aggregate: i.aggregate,
+    confidence,
+    ledger,
+    forecast,
+  });
+  const plan = buildActionPlan({
+    meta: KPI,
+    anomaly: i.anomaly,
+    drivers: i.drivers,
+    aggregate: i.aggregate,
+    confidence,
+    ledger,
+    scenario,
+  });
+  const story = await buildStory(KPI, i.anomaly, i.drivers, i.retrieval, confidence, {
+    aggregate: i.aggregate,
+    ledger,
+    plan,
+  });
+  return { confidence, ledger, forecast, scenario, plan, story };
+}
 
 /** What bridge() returns when there are no order rows at all. */
 const ZERO_BRIDGE = {
@@ -292,7 +344,8 @@ function emeaInput(): LedgerInput {
       prev_value: 2_255_000,
       region: "EMEA",
       period: "2025-06",
-      series: Array.from({ length: 18 }, (_, i) => ({ period: `p${i}`, value: 100 })),
+      value: 1_975_000,
+      series: seriesBack(18, "2025-06", 1, (i) => (i === 17 ? 1_975_000 : 2_200_000 + 4_000 * i)),
     } as unknown as AnomalyResult,
     drivers: {
       by_recurring: [
@@ -362,7 +415,8 @@ function apacInput(): LedgerInput {
       prev_value: 1_240_000,
       region: "APAC",
       period: "2025-06",
-      series: Array.from({ length: 18 }, (_, i) => ({ period: `p${i}`, value: 100 })),
+      value: 1_127_000,
+      series: seriesBack(18, "2025-06", 1, (i) => (i === 17 ? 1_127_000 : 1_220_000 + 2_000 * i)),
     } as unknown as AnomalyResult,
     drivers: {
       by_recurring: [
@@ -429,7 +483,10 @@ function connectedInput(): LedgerInput {
       prev_value: 100_000_000_000,
       region: "Total",
       period: "2026-06",
-      series: Array.from({ length: 20 }, (_, i) => ({ period: `p${i}`, value: 100 })),
+      value: 95_700_000_000,
+      series: seriesBack(20, "2026-06", 3, (i) =>
+        i === 19 ? 95_700_000_000 : 96_000_000_000 + 200_000_000 * i
+      ),
     } as unknown as AnomalyResult,
     drivers: {
       by_recurring: [],
@@ -601,16 +658,7 @@ test("ledger: every hypothesis score is exactly its weighted channels (decomposa
 
 test("story: a connected company gets SPECIFIC recommended actions, not 'breakdown unavailable'", async () => {
   const i = connectedInput();
-  const conf = scoreConfidence(i.anomaly, i.drivers, i.retrieval, i.aggregate);
-  const ledger = buildLedger(i);
-  const story = await buildStory(
-    { key: "revenue", ...META },
-    i.anomaly,
-    i.drivers,
-    i.retrieval,
-    conf,
-    { aggregate: i.aggregate, ledger }
-  );
+  const { ledger, story } = await chain(i);
 
   assert.ok(story.recommended_actions.length >= 3, "must recommend something actionable");
   const joined = story.recommended_actions.join(" ");
@@ -632,18 +680,8 @@ test("story: a connected company gets SPECIFIC recommended actions, not 'breakdo
 
 test("story: an ambiguous verdict recommends the deciding test FIRST, not a remedy", async () => {
   const i = apacInput();
-  const conf = scoreConfidence(i.anomaly, i.drivers, i.retrieval, i.aggregate);
-  const ledger = buildLedger(i);
+  const { ledger, story, plan, scenario } = await chain(i);
   assert.equal(ledger.verdict, "ambiguous", "fixture precondition");
-
-  const story = await buildStory(
-    { key: "revenue", ...META },
-    i.anomaly,
-    i.drivers,
-    i.retrieval,
-    conf,
-    { aggregate: i.aggregate, ledger }
-  );
 
   assert.match(story.recommended_actions[0], /test|Compare|Pull/i, "lead with the experiment");
   assert.match(
@@ -653,25 +691,32 @@ test("story: an ambiguous verdict recommends the deciding test FIRST, not a reme
   );
   // The alternative explanation must be visible in the caveats.
   assert.match(story.uncertainty.join(" "), /Two explanations fit|not ruled out|competing/i);
+
+  // The plan's posture and the scenario gate must agree with the ruling: an
+  // unconfirmed cause may not be handed a recovery curve.
+  assert.equal(plan.posture, "test_first");
+  assert.equal(plan.actions[0].kind, "test");
+  assert.equal(scenario.available, false);
+  assert.equal(scenario.gate, "cause_unconfirmed");
 });
 
 test("story: the confirmed demo case keeps its ARR-quantified churn plays", async () => {
   const i = emeaInput();
-  const conf = scoreConfidence(i.anomaly, i.drivers, i.retrieval, i.aggregate);
-  const ledger = buildLedger(i);
-  const story = await buildStory(
-    { key: "revenue", ...META },
-    i.anomaly,
-    i.drivers,
-    i.retrieval,
-    conf,
-    { aggregate: i.aggregate, ledger }
-  );
+  const { story, plan } = await chain(i);
   const joined = story.recommended_actions.join(" ");
   assert.match(joined, /Bug #402/, "the specific defect is still named");
   assert.match(joined, /save-play/i, "and the retention play is still recommended");
   assert.match(joined, /14 churned/, "quantified by account count");
   assert.equal(story.decision.verdict, "confirmed");
+
+  // Prose and panel are the same list, in the same order — no drift.
+  assert.deepEqual(story.recommended_actions, plan.actions.map((a) => a.action));
+  // Every step is owned and falsifiable.
+  for (const a of plan.actions) {
+    assert.ok(a.owner.length > 0, `${a.kind} action has an owner`);
+    assert.ok(a.check.length > 0, `${a.kind} action has a check that could fail`);
+    assert.ok(a.time_to_signal.length > 0, `${a.kind} action states when we'd know`);
+  }
 });
 
 /* ------------------------------------------------------------------- guards */

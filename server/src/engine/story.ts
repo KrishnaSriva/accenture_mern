@@ -14,6 +14,7 @@ import type { RetrievalResult } from "./retrieval";
 import type { Confidence } from "./confidence";
 import type { AggregateDrivers } from "./aggregate";
 import type { HypothesisLedger } from "./hypotheses";
+import type { ActionPlan } from "./actions";
 import { getOpenAI, CHAT_MODEL } from "../lib/openai";
 
 export interface KpiMeta {
@@ -292,138 +293,10 @@ function pickPrimaryCause(
 }
 
 /**
- * What to DO — the step the brief cares most about.
- *
- * The ordering rule is deliberate: when the data does not separate the top two
- * hypotheses, the recommended action is the TEST, not a remedy. Recommending a fix
- * for a cause you can't establish is how an "AI insight" burns a team's budget.
+ * What to DO now lives in actions.ts, which returns owned, quantified, falsifiable
+ * steps rather than sentences. Kept out of this module deliberately: the story
+ * narrates the plan, it does not author it.
  */
-function buildActions(
-  anomaly: AnomalyResult,
-  drivers: DriverResult,
-  conf: Confidence,
-  region: string,
-  aggregate: AggregateDrivers,
-  ledger: HypothesisLedger
-): string[] {
-  const lead = ledger.leading;
-  const runner = ledger.runner_up;
-
-  // 1) Nothing rankable — say what is missing rather than inventing advice.
-  if (ledger.verdict === "insufficient" || !lead) {
-    const missing = hasStructuredDrivers(drivers)
-      ? "qualitative signal (tickets, reviews, CRM notes) for this period"
-      : "a companion metric or segment split to decompose the move against";
-    return [
-      `Treat this as observed, not explained: no candidate cause clears the evidence bar for ${region} ${anomaly.period}.`,
-      `Add ${missing} and re-run — the engine cannot attribute a cause it has no channel to see.`,
-      "Confirm the move holds in the next period before allocating any effort to it.",
-    ];
-  }
-
-  // 2) Genuinely ambiguous — the deliverable is the discriminating experiment.
-  if (ledger.verdict === "ambiguous") {
-    const out = [`Run the discriminating test before committing spend — ${lead.test}`];
-    if (runner) {
-      out.push(
-        `Keep "${runner.label}" open as the live alternative (${runner.score}/100 vs ${lead.score}/100): ${runner.test}`
-      );
-    }
-    out.push(
-      `Do not fund a remedy yet. The leading explanation carries only ${lead.score}/100 support, so a fix aimed at it has roughly even odds of addressing the wrong thing.`
-    );
-    return out;
-  }
-
-  // 3) The demo's confirmed churn case keeps its specific, ARR-quantified plays.
-  const churn = drivers.churn;
-  const topReason = churn.by_reason[0];
-  const isBug = topReason && /bug|402|crash|sync/i.test(topReason.reason);
-  if (hasStructuredDrivers(drivers) && churn.churned_arr > 0 && isBug) {
-    return [
-      `Escalate "${topReason!.reason.split("—")[0].trim()}" to engineering with a committed fix date — it is the dominant churn reason.`,
-      `Launch save-plays for the ${churn.churned_count} churned ${region} accounts and any at-risk renewals in the next 90 days (${money(
-        churn.churned_arr
-      )} ARR at stake).`,
-      "Send affected enterprise customers a remediation timeline; track re-engagement weekly.",
-      `Verify before scaling the response — ${lead.test}`,
-    ];
-  }
-
-  // 4) Act on the leading hypothesis, keyed to what it actually claims.
-  const m = aggregate.margin;
-  const mixTop = aggregate.mix[0];
-  const byId: Record<string, string[]> = {
-    margin_structure: [
-      m.margin_delta_pp != null
-        ? `Take this to pricing and cost-of-sales, not to demand generation: margin moved ${pp(m.margin_delta_pp)} while revenue moved ${pct(
-            m.revenue_growth
-          )}, so the money is being lost between the sale and the gross line.`
-        : `Review cost structure for ${region} — the move is a profitability effect, not a volume one.`,
-      m.operating_leverage === "negative"
-        ? `Put a hold on opex growth: expenses grew ${pct(m.opex_growth)} against revenue ${pct(
-            m.revenue_growth
-          )}, and the gap is ${pp(m.opex_ratio_delta_pp ?? 0)} of revenue.`
-        : "Separate input-cost movement from discounting before choosing a lever — they need opposite responses.",
-    ],
-    demand: [
-      `Treat this as a demand/volume question for ${region}: margin held, so the change is in how much was sold rather than how profitably.`,
-      "Split the move into new vs. returning customers before choosing between acquisition spend and retention effort.",
-    ],
-    pricing: [
-      `Review realised pricing and mix in ${region} — the move is in price per unit of revenue, not units.`,
-      "Recompute like-for-like price by SKU to establish whether this was a deliberate price change or a mix shift.",
-    ],
-    concentration: [
-      mixTop
-        ? `Scope the next review to ${mixTop.key} alone — it carries ${pct(mixTop.pct_of_change)} of the change (${money(
-            mixTop.delta
-          )}) and its share of the mix moved ${pp(mixTop.share_delta_pp)}.`
-        : `Scope the next review to the largest contributing segment in ${region}.`,
-      "Check whether the other segments held steady; if they did, the cause is local and the fix should be too.",
-    ],
-    seasonality: [
-      `Do not escalate this as an incident — ${aggregate.seasonal.phase} moves ${pct(
-        aggregate.seasonal.typical
-      )} in a typical year and this period moved ${pct(aggregate.seasonal.current)}.`,
-      "Re-baseline the alert on a seasonal comparison (same phase, prior year) so this period stops triggering a review every cycle.",
-    ],
-    artefact: [
-      `Reconcile ${anomaly.period} against the filed statement before acting — check for a restatement, an acquisition closing, or a currency revaluation.`,
-      "Hold the analysis until the figure is confirmed; a data artefact will not respond to any business remedy.",
-    ],
-    defect: [
-      "Escalate to engineering for triage and ask for defect ticket volume by week over this period.",
-      "Identify the accounts exposed to the defect and prioritise outreach to the largest by revenue.",
-    ],
-    fulfilment: [
-      "Take this to operations: request on-time delivery rate and returns volume for the period against the trailing baseline.",
-      "Check whether the affected products share a carrier, warehouse, or lane before assuming a systemic failure.",
-    ],
-    quality: [
-      "Pull return rate and review scores by SKU to size the quality problem before responding to the sentiment.",
-      "Route the complaint cluster to product QA with the source documents attached.",
-    ],
-    competitor: [
-      "Pull closed-lost reasons for the period and check whether the named rival changed price or shipped a competing capability.",
-      "Brief sales with a current competitive comparison rather than repricing on news alone.",
-    ],
-  };
-
-  const specific = byId[lead.id] ?? [
-    `Investigate ${region} ${anomaly.period} against the leading explanation: ${lead.statement}`,
-    "Confirm the move holds next period before committing budget or headcount.",
-  ];
-
-  return [
-    ...specific,
-    `Verify, don't assume — ${lead.test}`,
-    ...(runner && runner.score >= 30
-      ? [`Second-most-likely cause to rule out: ${runner.label} (${runner.score}/100). ${runner.test}`]
-      : []),
-  ];
-}
-
 /**
  * What would make this wrong — stated up front, not buried.
  *
@@ -556,9 +429,9 @@ export async function buildStory(
   drivers: DriverResult,
   retrieval: RetrievalResult,
   confidence: Confidence,
-  ctx: { aggregate: AggregateDrivers; ledger: HypothesisLedger }
+  ctx: { aggregate: AggregateDrivers; ledger: HypothesisLedger; plan: ActionPlan }
 ): Promise<Story> {
-  const { aggregate, ledger } = ctx;
+  const { aggregate, ledger, plan } = ctx;
   const favorable = isFavorable(anomaly.direction, meta.higher_is_better);
   const { cause, mechanism } = pickPrimaryCause(anomaly, drivers, confidence, aggregate, ledger);
 
@@ -631,14 +504,9 @@ export async function buildStory(
       rationale: ledger.rationale,
     },
     uncertainty: buildUncertainty(anomaly, drivers, confidence, aggregate, ledger),
-    recommended_actions: buildActions(
-      anomaly,
-      drivers,
-      confidence,
-      anomaly.region,
-      aggregate,
-      ledger
-    ),
+    // Single source of truth: the narrative reads the same steps the action panel
+    // renders, so prose and plan cannot drift apart.
+    recommended_actions: plan.actions.map((a) => a.action),
   };
 
   const narrative = (await aiNarrative(base)) ?? deterministicNarrative(base);

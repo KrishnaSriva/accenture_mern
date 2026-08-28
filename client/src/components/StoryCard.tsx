@@ -20,7 +20,7 @@ const TIER_LABEL: Record<string, string> = {
   normal: "Within normal range",
 };
 
-export default function StoryCard({ data, effort, onEffortChange }: { data: AnalysisPayload; effort?: number; onEffortChange?: (v: number) => void }) {
+export default function StoryCard({ data }: { data: AnalysisPayload }) {
   const { story, change, meta } = data;
   const w = story.what_changed;
   const dir = change.direction;
@@ -70,7 +70,7 @@ export default function StoryCard({ data, effort, onEffortChange }: { data: Anal
             return (
               <span
                 key={i}
-                className="inline-flex cursor-help items-center justify-center rounded bg-brand/20 border border-brand/30 px-1.5 py-0.5 mx-0.5 font-mono text-[10px] font-bold text-brand hover:bg-brand/40 transition shadow-[0_0_8px_rgba(129,140,248,0.4)]"
+                className="inline-flex cursor-help items-center justify-center rounded bg-brand/15 border border-brand/30 px-1.5 py-0.5 mx-0.5 font-mono text-[10px] font-bold text-brand transition hover:bg-brand/30"
                 title={titleText}
               >
                 DOC
@@ -82,7 +82,7 @@ export default function StoryCard({ data, effort, onEffortChange }: { data: Anal
       </div>
 
       {/* primary cause */}
-      <div className="mt-5 rounded-lg bg-brand-soft/20 border border-brand/20 p-4 shadow-[inset_0_0_12px_rgba(129,140,248,0.1)]">
+      <div className="mt-5 rounded-lg bg-brand-soft/20 border border-brand/20 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="eyebrow text-brand">Primary cause</div>
           {/* The ruling sits next to the claim so the claim can't be read without it. */}
@@ -114,47 +114,13 @@ export default function StoryCard({ data, effort, onEffortChange }: { data: Anal
         )}
       </div>
 
-      {/* actions */}
-      <div className="mt-5">
-        <div className="eyebrow">Recommended actions</div>
-        <ol className="mt-2 space-y-2">
-          {story.recommended_actions.map((a, i) => (
-            <li key={i} className="flex gap-3 text-sm text-white/90">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white shadow-[0_0_8px_rgba(129,140,248,0.4)]">
-                {i + 1}
-              </span>
-              <span>{a}</span>
-            </li>
-          ))}
-        </ol>
-
-        {/* Prescriptive Analytics Slider */}
-        {onEffortChange && (
-          <div className="mt-6 rounded-lg border border-brand/20 bg-brand/5 p-4">
-            <div className="flex items-center justify-between">
-              <div className="eyebrow text-brand">Simulate Remediation Effort</div>
-              <div className="font-mono text-xs font-bold text-brand">{effort}%</div>
-            </div>
-            <p className="mt-1 text-xs text-white/60 mb-3">Adjust budget/focus to project recovery curve on the chart.</p>
-            <input 
-              type="range" 
-              min="0" 
-              max="100" 
-              value={effort ?? 0} 
-              onChange={(e) => onEffortChange(parseInt(e.target.value))}
-              className="w-full accent-brand cursor-pointer"
-            />
-          </div>
-        )}
-      </div>
-
       {/* uncertainty — honesty about the limits */}
       <div className="mt-5 rounded-lg border border-warn/25 bg-warn-soft/10 p-4">
         <div className="eyebrow text-warn">What could change this read</div>
         <ul className="mt-2 space-y-1.5">
           {story.uncertainty.map((u, i) => (
             <li key={i} className="flex gap-2 text-xs text-white/80">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-warn shadow-[0_0_4px_rgba(245,158,11,0.5)]" />
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-warn" />
               <span>{u}</span>
             </li>
           ))}
