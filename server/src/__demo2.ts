@@ -235,14 +235,14 @@ async function show(title: string, input: LedgerInput): Promise<void> {
     input.drivers,
     input.retrieval,
     conf,
-    { aggregate: input.aggregate, ledger }
+    { aggregate: input.aggregate, ledger, plan: { actions: [] } as any }
   );
 
   console.log(`\n${"=".repeat(78)}\n${title}\n${"=".repeat(78)}`);
   console.log(
     `VERDICT: ${ledger.verdict}  | leader: ${ledger.leading?.id ?? "none"} ${
       ledger.leading?.score ?? "-"
-    }/100 | margin: ${ledger.margin_of_victory} | confidence: ${conf.band}`
+    }/100 | margin: ${ledger.margin_of_victory} | confidence: ${conf.label}`
   );
   console.log("\nRANKED");
   for (const h of ledger.hypotheses) {

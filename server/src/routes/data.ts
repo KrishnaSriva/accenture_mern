@@ -18,8 +18,12 @@ router.get("/kpis", async (req, res) => {
   // Merge them, prioritizing the company's own KPI definitions if keys overlap,
   // but including all the DEMO KPIs (Orders, Units Sold, etc.) so they appear in the dropdown.
   const map = new Map<string, any>();
-  for (const k of demoKpis) map.set(k.key, { ...k, company }); // Relabel demo KPIs for this company
-  for (const k of companyKpis) map.set(k.key, k);
+  for (const k of demoKpis) {
+    if (k.key) map.set(k.key, { ...k, company }); // Relabel demo KPIs for this company
+  }
+  for (const k of companyKpis) {
+    if (k.key) map.set(k.key, k);
+  }
 
   res.json(Array.from(map.values()));
 });
@@ -83,7 +87,7 @@ router.get("/kpi-values", async (req, res) => {
     .sort({ period: 1 })
     .lean();
 
-  if (region) {
+  if (finalRegion) {
     return res.json(rows.map((r) => ({ period: r.period, value: r.value })));
   }
 

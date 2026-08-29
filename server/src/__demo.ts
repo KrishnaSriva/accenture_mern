@@ -29,7 +29,7 @@ const retrieval: any = { theme_spikes:[], top_documents:[] };
   const conf = scoreConfidence(anomaly, drivers, retrieval, aggregate);
   const ledger = buildLedger({ meta:{name:"Revenue",unit:"USD",higher_is_better:true}, anomaly, drivers, aggregate, retrieval });
   const story = await buildStory({ key:"revenue", name:"Revenue", unit:"USD", higher_is_better:true } as any,
-    anomaly, drivers, retrieval, conf, { aggregate, ledger });
+    anomaly, drivers, retrieval, conf, { aggregate, ledger, plan: { actions: [] } as any });
 
   console.log("VERDICT:", ledger.verdict, "| leader:", ledger.leading?.id, ledger.leading?.score, "| margin:", ledger.margin_of_victory);
   console.log("\nRANKED:");
