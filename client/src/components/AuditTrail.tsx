@@ -31,9 +31,25 @@ export default function AuditTrail({ provenance }: { provenance: Provenance }) {
           <div className="eyebrow">Show the math</div>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-white/75">{provenance.llm_role}</p>
         </div>
-        <div className="font-mono text-[11px] text-right text-muted">
-          <div>{total} computations</div>
-          {withheld > 0 && <div className="text-warn">{withheld} withheld</div>}
+        <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-right text-muted">
+          <div>
+            <div>{total} computations</div>
+            {withheld > 0 && <div className="text-warn">{withheld} withheld</div>}
+          </div>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 transition text-xs font-sans font-medium shadow-sm no-print"
+          >
+            <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            Export PDF Report
+          </button>
         </div>
       </div>
 

@@ -173,12 +173,32 @@ export default function OutlookPanel({ forecast, scenario, plan, share, onShareC
         {scenario.available ? (
           <>
             <p className="mt-1.5 text-xs leading-relaxed text-white/75">
-              Recovering{" "}
-              <span className="font-mono font-semibold text-white">{money(scenario.recoverable, scenario.unit)}</span>{" "}
+              Recovering up to{" "}
+              <span className="font-mono font-semibold text-emerald-400">{money(scenario.recoverable, scenario.unit)}</span>{" "}
               attributed to <span className="font-semibold text-white">{scenario.attributed_to}</span>
-              {scenario.share_of_move_pct != null && ` — ${scenario.share_of_move_pct}% of the total move`}. The slider
-              moves that share back onto the validated baseline, nothing more.
+              {scenario.share_of_move_pct != null && ` — ${scenario.share_of_move_pct}% of total move`}.
             </p>
+
+            {/* Quick Presets */}
+            <div className="mt-3 flex items-center justify-between gap-1.5">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted">Preset Share:</span>
+              <div className="flex gap-1">
+                {[0, 25, 50, 75, 100].map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => onShareChange(preset)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition border ${
+                      share === preset
+                        ? "bg-brand/20 text-brand border-brand/50"
+                        : "bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-200"
+                    }`}
+                  >
+                    {preset}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <input
               type="range"
               min="0"
@@ -187,8 +207,17 @@ export default function OutlookPanel({ forecast, scenario, plan, share, onShareC
               value={share}
               onChange={(e) => onShareChange(Number(e.target.value))}
               aria-label="Share of the attributed loss recovered"
-              className="mt-3 w-full cursor-pointer accent-brand"
+              className="mt-2.5 w-full cursor-pointer accent-brand"
             />
+
+            {/* Live Calculation Banner */}
+            <div className="mt-3 p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between">
+              <span className="text-xs text-emerald-300 font-medium">Modelled Recovery Target:</span>
+              <span className="font-mono text-sm font-bold text-emerald-400">
+                +{money(scenario.recoverable * (share / 100), scenario.unit)}
+              </span>
+            </div>
+
             <div className="mt-2 grid grid-cols-1 gap-2 border-t border-white/10 pt-2 text-[11px] sm:grid-cols-2">
               <div className="text-muted">
                 Baseline endpoint{" "}

@@ -103,3 +103,26 @@ input[type="range"]:focus-visible {
     transition: none;
   }
 }
+
+/* Executive PDF Print Export Styles */
+@media print {
+  .no-print,
+  button,
+  input[type="range"],
+  select {
+    display: none !important;
+  }
+  body {
+    background-color: #090d16 !important;
+    background-image: none !important;
+    color: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .panel {
+    border: 1px solid #334155 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
