@@ -238,6 +238,19 @@ export function scoreConfidence(
           : "No renewal or CRM record attributes this move to a named cause.",
     });
   }
+  // 4b) Triangulated Multi-Variate Agreement (Option 4)
+  // Check for a 3-way lock between Financials (volume drop), CRM Behavior (churn), and Sentiment (chatter)
+  const pv = drivers?.price_volume;
+  const hasVolumeDrop = pv ? pv.volume_effect < 0 : false;
+  const hasChurnSpike = churn?.churned_arr > 0;
+  const hasSentimentSpike = retrieval.negative_share > (retrieval.negative_baseline * 1.1); // at least 10% worse than baseline
+
+  if (hasVolumeDrop && hasChurnSpike && hasSentimentSpike) {
+    score += 18;
+    reasons.push(
+      "Triangulated Multi-Variate Agreement: Financial volume drop, CRM churn, and unstructured negative sentiment all align synchronously."
+    );
+  }
 
   // 5) macroeconomic context (FRED indicators)
   if (macro?.available && macro.macro_pct_change != null) {
