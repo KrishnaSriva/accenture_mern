@@ -376,34 +376,38 @@ export default function App() {
                 </div>
               </div>
 
-              {/* story + drivers (left 2/3) vs what-if slider/macro/confidence (right 1/3) */}
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Row 1: Executive Narrative Briefing, Structured Drivers & Confidence Diagnostics */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
                 <div className="lg:col-span-2 space-y-6">
                   <StoryCard data={data} />
                   <ContributorBars drivers={data.drivers} aggregate={data.aggregate} />
-                  <ActionPlanPanel plan={data.action_plan} />
                 </div>
                 <div className="space-y-6">
                   <ConfidenceBadge confidence={data.confidence} />
                   <MacroRealityBadge macro={data.macro} />
-                  <OutlookPanel
-                    forecast={data.forecast}
-                    scenario={data.scenario}
-                    plan={data.action_plan}
-                    share={recoveryShare}
-                    onShareChange={setRecoveryShare}
-                  />
                 </div>
               </div>
 
-              {/* competing explanations — the correlation→decision step */}
+              {/* Row 2: Bayesian Hypothesis Ledger & Decisive Arbitration */}
               {data.ledger && <HypothesisLedgerPanel ledger={data.ledger} />}
 
-              {/* bottom grid: evidence (left) vs audit trail math (right) */}
+              {/* Row 3: Actionable Strategy (Left) vs Qualitative Evidence & Customer Chatter (Right) */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
+                <ActionPlanPanel plan={data.action_plan} />
                 <EvidenceList evidence={data.evidence} />
-                {data.provenance && <AuditTrail provenance={data.provenance} />}
               </div>
+
+              {/* Row 4: Forward-Looking Projections & What-If Recovery Model */}
+              <OutlookPanel
+                forecast={data.forecast}
+                scenario={data.scenario}
+                plan={data.action_plan}
+                share={recoveryShare}
+                onShareChange={setRecoveryShare}
+              />
+
+              {/* Row 5: Mathematical Audit Trail & Verifiable Provenance */}
+              {data.provenance && <AuditTrail provenance={data.provenance} />}
             </div>
           )}
         </section>
