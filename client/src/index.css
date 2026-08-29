@@ -104,10 +104,10 @@ input[type="range"]:focus-visible {
   }
 }
 
-/* High-Contrast Executive PDF Print Export Styles */
+/* Authentic Formal Corporate & Legal Executive Print Deck */
 @media print {
   @page {
-    margin: 12mm;
+    margin: 10mm;
     size: A4 portrait;
   }
 
@@ -120,36 +120,41 @@ input[type="range"]:focus-visible {
   }
 
   body {
-    background-color: #0b0f19 !important;
+    background-color: #ffffff !important;
     background-image: none !important;
-    color: #f8fafc !important;
+    color: #0f172a !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     font-size: 11px !important;
   }
 
   .panel {
-    background-color: #111827 !important;
-    border: 1px solid #334155 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
     box-shadow: none !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
     margin-bottom: 12px !important;
+    padding: 16px !important;
   }
 
-  /* High contrast text overrides */
-  h1, h2, h3, h4, .text-white, .font-semibold, .font-bold {
-    color: #ffffff !important;
+  /* High contrast formal typography */
+  h1, h2, h3, h4, .text-white, .font-semibold, .font-bold, .font-display {
+    color: #0f172a !important;
   }
 
-  .text-muted, .text-slate-400, .text-white\/75, .text-white\/35 {
-    color: #94a3b8 !important;
+  .text-muted, .text-slate-400, .text-white\/75, .text-white\/35, .text-slate-300 {
+    color: #334155 !important;
+  }
+
+  .eyebrow {
+    color: #475569 !important;
   }
 
   /* SVG Chart text visibility in print */
   svg text {
-    fill: #cbd5e1 !important;
-    font-weight: 500 !important;
+    fill: #0f172a !important;
+    font-weight: 600 !important;
   }
 
   svg path, svg line {
