@@ -156,7 +156,7 @@ export default function Controls(p: Props) {
         </div>
       </div>
       
-      {/* demo scenarios */}
+      {/* Quick analysis scenarios — available for all companies */}
       {isDemo && (
         <div className="md:col-span-2 lg:col-span-3 border-t border-hairline pt-4">
           <div className="eyebrow">Demo scenarios</div>
@@ -169,6 +169,25 @@ export default function Controls(p: Props) {
               >
                 <div className="font-mono text-xs font-bold text-white">{d.label}</div>
                 <div className="text-[11px] text-muted">{d.sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {!isDemo && p.kpis.length > 0 && (
+        <div className="md:col-span-2 lg:col-span-3 border-t border-hairline pt-4">
+          <div className="eyebrow">Quick scenarios — {p.company}</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {p.kpis.slice(0, 6).map((k) => (
+              <button
+                key={k.key}
+                onClick={() => p.onKpi(k.key)}
+                className={`rounded-lg border p-3 text-left transition hover:border-brand/40 hover:bg-brand-soft/10 ${
+                  p.kpi === k.key ? "border-brand/40 bg-brand/5" : "border-hairline"
+                }`}
+              >
+                <div className="font-mono text-xs font-bold text-white">{k.name}</div>
+                <div className="text-[11px] text-muted">{k.key}</div>
               </button>
             ))}
           </div>
