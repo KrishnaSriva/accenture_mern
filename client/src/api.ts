@@ -8,7 +8,8 @@ import type {
 } from "./types";
 
 // Same-origin in dev thanks to the Vite proxy (/api -> :4000).
-const BASE = "/api";
+// In production, VITE_API_BASE_URL environment variable should point to the backend (e.g. https://your-server.onrender.com/api).
+const BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 async function get<T>(path: string): Promise<T> {
   const r = await fetch(`${BASE}${path}`);
