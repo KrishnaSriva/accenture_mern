@@ -384,7 +384,8 @@ export default function App() {
                   <ActionPlanPanel plan={data.action_plan} />
                 </div>
                 <div className="space-y-6">
-                  {/* Recovery slider first — most impactful for demos */}
+                  <ConfidenceBadge confidence={data.confidence} />
+                  <MacroRealityBadge macro={data.macro} />
                   <OutlookPanel
                     forecast={data.forecast}
                     scenario={data.scenario}
@@ -392,8 +393,6 @@ export default function App() {
                     share={recoveryShare}
                     onShareChange={setRecoveryShare}
                   />
-                  <MacroRealityBadge macro={data.macro} />
-                  <ConfidenceBadge confidence={data.confidence} />
                 </div>
               </div>
 
