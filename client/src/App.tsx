@@ -371,10 +371,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* story + confidence/drivers */}
+              {/* story + drivers (left 2/3) vs macro/confidence/outlook (right 1/3) */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-6">
                   <StoryCard data={data} />
+                  <ContributorBars drivers={data.drivers} aggregate={data.aggregate} />
                   <ActionPlanPanel plan={data.action_plan} />
                 </div>
                 <div className="space-y-6">
@@ -387,18 +388,17 @@ export default function App() {
                     share={recoveryShare}
                     onShareChange={setRecoveryShare}
                   />
-                  <ContributorBars drivers={data.drivers} aggregate={data.aggregate} />
                 </div>
               </div>
 
               {/* competing explanations — the correlation→decision step */}
               {data.ledger && <HypothesisLedgerPanel ledger={data.ledger} />}
 
-              {/* evidence */}
-              <EvidenceList evidence={data.evidence} />
-
-              {/* every number, traced back to its arithmetic */}
-              {data.provenance && <AuditTrail provenance={data.provenance} />}
+              {/* bottom grid: evidence (left) vs audit trail math (right) */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
+                <EvidenceList evidence={data.evidence} />
+                {data.provenance && <AuditTrail provenance={data.provenance} />}
+              </div>
             </div>
           )}
         </section>
