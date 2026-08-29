@@ -47,11 +47,14 @@ const CAP_LOCATED = 62;
 const CAP_EXTERNAL_ONLY = 44;
 const CAP_NOTHING = 38;
 
+import type { MacroAnalysis } from "./macro";
+
 export function scoreConfidence(
   anomaly: AnomalyResult,
   drivers: DriverResult,
   retrieval: RetrievalResult,
-  aggregate?: AggregateDrivers
+  aggregate?: AggregateDrivers,
+  macro?: MacroAnalysis
 ): Confidence {
   const reasons: string[] = [];
   const components: ConfidenceComponent[] = [];
@@ -234,6 +237,19 @@ export function scoreConfidence(
           ? "Churn is present but no single reason code carries at least half of the lost ARR."
           : "No renewal or CRM record attributes this move to a named cause.",
     });
+  }
+
+  // 5) macroeconomic context (FRED indicators)
+  if (macro?.available && macro.macro_pct_change != null) {
+    const pts = macro.classification === "internal_incident" ? 8 : 10;
+    add(
+      "macro_context",
+      "Macroeconomic indicators delineate the move",
+      pts,
+      10,
+      `FRED series ${macro.series_id} shifted ${macro.macro_pct_change}%. ${macro.summary}`
+    );
+    reasons.push(`Macroeconomic context (${macro.series_id}): ${macro.classification_label}.`);
   }
 
   const subtotal = clamp(Math.round(score), 0, 100);

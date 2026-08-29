@@ -27,6 +27,8 @@ import { buildActionPlan, ActionPlan } from "./actions";
 import { buildProvenance, Provenance } from "./provenance";
 import { buildStory, Story, KpiMeta } from "./story";
 
+import { analyzeMacro, MacroAnalysis } from "./macro";
+
 const SOFTWARE_KEY = "Software (subscription)";
 
 export interface AnalysisPayload {
@@ -38,6 +40,7 @@ export interface AnalysisPayload {
   change: AnomalyResult;
   drivers: DriverResult;
   aggregate: AggregateDrivers;
+  macro: MacroAnalysis;
   evidence: RetrievalResult;
   confidence: Confidence;
   ledger: HypothesisLedger;
@@ -135,8 +138,11 @@ export async function analyze(
     company
   );
 
+  // 2c) macroeconomic context (FRED exchange rates & inflation)
+  const macro = await analyzeMacro(change, drivers);
+
   // 4) how confident are we in the CAUSE (not just the change)?
-  const confidence = scoreConfidence(change, drivers, evidence, aggregate);
+  const confidence = scoreConfidence(change, drivers, evidence, aggregate, macro);
 
   // 5) rank every cause the data could support, and name the test that would
   // disconfirm each. This is what turns a correlation into a decision.
@@ -241,6 +247,7 @@ export async function analyze(
     change,
     drivers,
     aggregate,
+    macro,
     evidence,
     confidence,
     ledger,

@@ -5,6 +5,7 @@ import Controls from "./components/Controls";
 import KpiChart from "./components/KpiChart";
 import StoryCard from "./components/StoryCard";
 import ConfidenceBadge from "./components/ConfidenceBadge";
+import { MacroRealityBadge } from "./components/MacroRealityBadge";
 import ContributorBars from "./components/ContributorBars";
 import HypothesisLedgerPanel from "./components/HypothesisLedgerPanel";
 import EvidenceList from "./components/EvidenceList";
@@ -356,6 +357,7 @@ export default function App() {
                   <ActionPlanPanel plan={data.action_plan} />
                 </div>
                 <div className="space-y-6">
+                  <MacroRealityBadge macro={data.macro} />
                   <ConfidenceBadge confidence={data.confidence} />
                   <OutlookPanel
                     forecast={data.forecast}

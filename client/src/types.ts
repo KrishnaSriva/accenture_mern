@@ -449,6 +449,25 @@ export interface Provenance {
   sections: ProvenanceSection[];
 }
 
+export interface MacroAnalysis {
+  available: boolean;
+  series_id: string;
+  series_title: string;
+  units: string;
+  source: "fred_api" | "offline_fallback";
+  target_period: string;
+  current_value: number | null;
+  prev_value: number | null;
+  macro_pct_change: number | null;
+  kpi_pct_change: number | null;
+  macro_impact_pct: number;
+  internal_impact_pct: number;
+  classification: "internal_incident" | "macro_headwind" | "market_tailwind" | "balanced";
+  classification_label: string;
+  summary: string;
+  notes: string[];
+}
+
 export interface AnalysisPayload {
   company: string;
   kpi_key: string;
@@ -458,6 +477,7 @@ export interface AnalysisPayload {
   change: AnomalyResult;
   drivers: DriverResult;
   aggregate: AggregateDrivers;
+  macro?: MacroAnalysis;
   evidence: RetrievalResult;
   confidence: Confidence;
   ledger: HypothesisLedger;

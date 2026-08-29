@@ -58,12 +58,15 @@ export interface Provenance {
   sections: ProvenanceSection[];
 }
 
+import type { MacroAnalysis } from "./macro";
+
 export interface ProvenanceInput {
   meta: KpiMeta;
   company: string;
   anomaly: AnomalyResult;
   drivers: DriverResult;
   aggregate: AggregateDrivers;
+  macro?: MacroAnalysis;
   retrieval: RetrievalResult;
   confidence: Confidence;
   ledger: HypothesisLedger;
