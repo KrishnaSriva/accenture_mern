@@ -82,13 +82,11 @@ export default function AuditTrail({ provenance }: { provenance: Provenance }) {
                 </span>
               </button>
 
-              {isOpen && (
-                <div className="space-y-2.5 pb-4 pl-6">
-                  {s.computations.map((c) => (
-                    <Row key={c.id} c={c} />
-                  ))}
-                </div>
-              )}
+              <div className={isOpen ? "space-y-2.5 pb-4 pl-6" : "hidden print:block space-y-2.5 pb-4 pl-6"}>
+                {s.computations.map((c) => (
+                  <Row key={c.id} c={c} />
+                ))}
+              </div>
             </div>
           );
         })}

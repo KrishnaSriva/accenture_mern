@@ -74,7 +74,7 @@ export default function EvidenceList({ evidence }: { evidence: RetrievalResult }
                 </span>
               ))}
             </div>
-            <p className="text-xs leading-relaxed text-white/85">{d.text}</p>
+            <p className="text-xs leading-relaxed text-white/85 print:text-slate-900 font-normal">{d.text}</p>
           </li>
         ))}
       </ul>
