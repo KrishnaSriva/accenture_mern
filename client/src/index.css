@@ -104,25 +104,55 @@ input[type="range"]:focus-visible {
   }
 }
 
-/* Executive PDF Print Export Styles */
+/* High-Contrast Executive PDF Print Export Styles */
 @media print {
+  @page {
+    margin: 12mm;
+    size: A4 portrait;
+  }
+
   .no-print,
   button,
-  input[type="range"],
-  select {
+  input,
+  select,
+  header {
     display: none !important;
   }
+
   body {
-    background-color: #090d16 !important;
+    background-color: #0b0f19 !important;
     background-image: none !important;
     color: #f8fafc !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    font-size: 11px !important;
   }
+
   .panel {
+    background-color: #111827 !important;
     border: 1px solid #334155 !important;
     box-shadow: none !important;
-    break-inside: avoid;
-    page-break-inside: avoid;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* High contrast text overrides */
+  h1, h2, h3, h4, .text-white, .font-semibold, .font-bold {
+    color: #ffffff !important;
+  }
+
+  .text-muted, .text-slate-400, .text-white\/75, .text-white\/35 {
+    color: #94a3b8 !important;
+  }
+
+  /* SVG Chart text visibility in print */
+  svg text {
+    fill: #cbd5e1 !important;
+    font-weight: 500 !important;
+  }
+
+  svg path, svg line {
+    stroke-linecap: round;
   }
 }

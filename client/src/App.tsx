@@ -240,28 +240,46 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-5 space-y-5 sm:px-6 sm:py-6 sm:space-y-6">
-        <Controls
-          kpis={kpis}
-          regions={regions}
-          periods={periods}
-          companies={companies}
-          company={company}
-          sources={sources}
-          connecting={connecting}
-          connectMsg={connectMsg}
-          kpi={kpi}
-          region={region}
-          period={period}
-          loading={loading}
-          onKpi={onKpiChange}
-          onRegion={onRegionChange}
-          onPeriod={onPeriodChange}
-          onCompany={loadCompany}
-          onConnect={onConnect}
-          onAnalyze={() => run(kpi, region, period)}
-          onScan={runScan}
-          onDemo={onDemo}
-        />
+        {/* Executive Print-Only Header */}
+        <div className="hidden print:block p-5 rounded-xl border border-slate-700 bg-slate-900/90 text-white">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold font-display text-indigo-300">Executive Intelligence Briefing & Audit Report</h1>
+              <p className="text-xs text-slate-300 font-mono mt-1">
+                KPI Engine · {companyName} ({company}) · {data?.meta.name} · {regionName} ({region})
+              </p>
+            </div>
+            <div className="text-right font-mono text-xs text-slate-300">
+              <div>Date Generated: {new Date().toISOString().slice(0, 10)}</div>
+              <div>Anomaly Period: {data?.change.period}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="no-print">
+          <Controls
+            kpis={kpis}
+            regions={regions}
+            periods={periods}
+            companies={companies}
+            company={company}
+            sources={sources}
+            connecting={connecting}
+            connectMsg={connectMsg}
+            kpi={kpi}
+            region={region}
+            period={period}
+            loading={loading}
+            onKpi={onKpiChange}
+            onRegion={onRegionChange}
+            onPeriod={onPeriodChange}
+            onCompany={loadCompany}
+            onConnect={onConnect}
+            onAnalyze={() => run(kpi, region, period)}
+            onScan={runScan}
+            onDemo={onDemo}
+          />
+        </div>
 
         <section className="space-y-5 sm:space-y-6">
           {error && (
