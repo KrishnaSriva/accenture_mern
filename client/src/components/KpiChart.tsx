@@ -193,16 +193,7 @@ export default function KpiChart({
 
         {g.bandPath && <path d={g.bandPath} fill="#94a3b8" fillOpacity="0.14" />}
 
-        {g.fcPts.length > 0 && g.anchor && (
-          <path
-            d={path([{ cx: g.anchor.cx, cy: g.anchor.cy }, ...g.fcPts])}
-            fill="none"
-            stroke="#94a3b8"
-            strokeWidth="2"
-            strokeDasharray="5 5"
-            strokeLinecap="round"
-          />
-        )}
+        {/* Forecast dotted line removed per user request */}
 
         {g.scen.length > 0 && g.anchor && (
           <path
