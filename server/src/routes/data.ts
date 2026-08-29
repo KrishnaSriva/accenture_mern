@@ -8,8 +8,20 @@ const companyOf = (req: { query: Record<string, any> }): string =>
 
 // GET /api/kpis?company=  -> catalog of KPIs for a company
 router.get("/kpis", async (req, res) => {
-  const kpis = await Kpi.find({ company: companyOf(req) }, { _id: 0 }).lean();
-  res.json(kpis);
+  const company = companyOf(req);
+  // Fetch both the requested company's KPIs and the DEMO KPIs
+  const [companyKpis, demoKpis] = await Promise.all([
+    Kpi.find({ company }, { _id: 0 }).lean(),
+    company !== "DEMO" ? Kpi.find({ company: "DEMO" }, { _id: 0 }).lean() : Promise.resolve([]),
+  ]);
+
+  // Merge them, prioritizing the company's own KPI definitions if keys overlap,
+  // but including all the DEMO KPIs (Orders, Units Sold, etc.) so they appear in the dropdown.
+  const map = new Map<string, any>();
+  for (const k of demoKpis) map.set(k.key, { ...k, company }); // Relabel demo KPIs for this company
+  for (const k of companyKpis) map.set(k.key, k);
+
+  res.json(Array.from(map.values()));
 });
 
 // GET /api/regions?company= -> catalog of regions for a company
