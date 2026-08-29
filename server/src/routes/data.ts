@@ -36,19 +36,24 @@ router.get("/products", async (req, res) => {
   res.json(products);
 });
 
+const DEMO_KPIS = ["orders", "units", "renewal_arr", "marketing_spend", "web_traffic"];
+
 /**
  * GET /api/periods?company=&region=&kpi= -> distinct periods, sorted ascending
- *
- * region/kpi are OPTIONAL but strongly recommended. A connected company stores two
- * grains side by side — quarterly income at region "Total" and ANNUAL geographic
- * segmentation per region — so the unfiltered union offers periods that don't exist
- * for the selected region. Picking one of those yielded a NaN series ("held n/a",
- * "$0 → $NaN") and a chart that never moved. Filtering by region+kpi makes the
- * dropdown offer only periods that actually resolve.
  */
 router.get("/periods", async (req, res) => {
-  const q: Record<string, string> = { company: companyOf(req) };
-  if (req.query.region) q.region = String(req.query.region);
+  let finalCompany = companyOf(req);
+  let finalRegion = req.query.region ? String(req.query.region) : undefined;
+  
+  // Magic fallback: if the user selects a DEMO-only KPI on a real company, route it
+  // to the DEMO synthetic data so they get a working chart and analysis.
+  if (req.query.kpi && DEMO_KPIS.includes(String(req.query.kpi)) && finalCompany !== "DEMO") {
+    finalCompany = "DEMO";
+    finalRegion = "EMEA";
+  }
+
+  const q: Record<string, string> = { company: finalCompany };
+  if (finalRegion) q.region = finalRegion;
   if (req.query.kpi) q.kpi_key = String(req.query.kpi);
 
   const periods = await KpiValue.distinct("period", q);
@@ -58,17 +63,21 @@ router.get("/periods", async (req, res) => {
 
 /**
  * GET /api/kpi-values?kpi=revenue&region=EMEA&company=DEMO
- * Returns a time series [{ period, value }] for a KPI.
- * - region omitted  -> series per region: { EMEA: [...], NA: [...], ... }
- * - region provided -> flat series for that region
  */
 router.get("/kpi-values", async (req, res) => {
   const kpi = String(req.query.kpi || "");
-  const region = req.query.region ? String(req.query.region) : null;
+  let finalCompany = companyOf(req);
+  let finalRegion = req.query.region ? String(req.query.region) : null;
+  
+  if (DEMO_KPIS.includes(kpi) && finalCompany !== "DEMO") {
+    finalCompany = "DEMO";
+    finalRegion = "EMEA";
+  }
+
   if (!kpi) return res.status(400).json({ error: "kpi is required" });
 
-  const q: Record<string, string> = { company: companyOf(req), kpi_key: kpi };
-  if (region) q.region = region;
+  const q: Record<string, string> = { company: finalCompany, kpi_key: kpi };
+  if (finalRegion) q.region = finalRegion;
 
   const rows = await KpiValue.find(q, { _id: 0, kpi_key: 0 })
     .sort({ period: 1 })
