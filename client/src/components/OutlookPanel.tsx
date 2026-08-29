@@ -162,35 +162,46 @@ export default function OutlookPanel({ forecast, scenario, plan, share, onShareC
       )}
 
       {/* recovery scenario — a slider only when the engine can defend one */}
-      <div className="mt-4 rounded-lg border border-hairline bg-black/20 p-4">
+      <div className={`mt-4 rounded-xl border p-4 ${scenario.available ? "border-emerald-500/30 bg-emerald-950/20" : "border-hairline bg-black/20"}`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className={`eyebrow ${scenario.available ? "text-brand" : "text-warn"}`}>
-            {GATE_LABEL[scenario.gate]}
+          <div className={`eyebrow ${scenario.available ? "text-emerald-400" : "text-warn"}`}>
+            {scenario.available ? "🎛️ What-If Recovery Scenario" : GATE_LABEL[scenario.gate]}
           </div>
-          {scenario.available && <div className="font-mono text-xs font-bold text-brand">{share}%</div>}
+          {scenario.available && <div className="font-mono text-xs font-bold text-emerald-400">{share}% applied</div>}
         </div>
 
         {scenario.available ? (
           <>
-            <p className="mt-1.5 text-xs leading-relaxed text-white/75">
-              Recovering up to{" "}
-              <span className="font-mono font-semibold text-emerald-400">{money(scenario.recoverable, scenario.unit)}</span>{" "}
-              attributed to <span className="font-semibold text-white">{scenario.attributed_to}</span>
-              {scenario.share_of_move_pct != null && ` — ${scenario.share_of_move_pct}% of total move`}.
+            {/* Big Impact Number */}
+            <div className="mt-3 rounded-lg bg-black/30 p-3 text-center border border-emerald-500/20">
+              <div className="text-[10px] uppercase tracking-widest text-emerald-500/70 font-mono">Modelled ARR Recovery</div>
+              <div className="mt-1 font-mono text-3xl font-bold text-emerald-400 tabular-nums">
+                +{money(scenario.recoverable * (share / 100), scenario.unit)}
+              </div>
+              <div className="mt-0.5 text-[10px] text-emerald-600 font-mono">
+                of {money(scenario.recoverable, scenario.unit)} addressable · {scenario.share_of_move_pct}% of total move
+              </div>
+            </div>
+
+            <p className="mt-2.5 text-xs leading-relaxed text-white/70">
+              Fixing <span className="font-semibold text-white">{scenario.attributed_to}</span>{" "}
+              ({scenario.mechanism}) could recover up to{" "}
+              <span className="font-mono font-semibold text-emerald-400">{money(scenario.recoverable, scenario.unit)}</span>.
+              Drag the slider to model partial recovery timelines.
             </p>
 
             {/* Quick Presets */}
             <div className="mt-3 flex items-center justify-between gap-1.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-muted">Preset Share:</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted">If we fix</span>
               <div className="flex gap-1">
-                {[0, 25, 50, 75, 100].map((preset) => (
+                {[25, 50, 75, 100].map((preset) => (
                   <button
                     key={preset}
                     onClick={() => onShareChange(preset)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition border ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition border ${
                       share === preset
-                        ? "bg-brand/20 text-brand border-brand/50"
-                        : "bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-200"
+                        ? "bg-emerald-600/30 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(52,211,153,0.2)]"
+                        : "bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-emerald-300 hover:border-emerald-700/50"
                     }`}
                   >
                     {preset}%
@@ -207,34 +218,14 @@ export default function OutlookPanel({ forecast, scenario, plan, share, onShareC
               value={share}
               onChange={(e) => onShareChange(Number(e.target.value))}
               aria-label="Share of the attributed loss recovered"
-              className="mt-2.5 w-full cursor-pointer accent-brand"
+              className="mt-2 w-full cursor-pointer accent-emerald-500"
             />
 
-            {/* Live Calculation Banner */}
-            <div className="mt-3 p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between">
-              <span className="text-xs text-emerald-300 font-medium">Modelled Recovery Target:</span>
-              <span className="font-mono text-sm font-bold text-emerald-400">
-                +{money(scenario.recoverable * (share / 100), scenario.unit)}
-              </span>
-            </div>
-
-            <div className="mt-2 grid grid-cols-1 gap-2 border-t border-white/10 pt-2 text-[11px] sm:grid-cols-2">
-              <div className="text-muted">
-                Baseline endpoint{" "}
-                <span className="font-mono text-white/85">{money(scenario.baseline_endpoint, scenario.unit)}</span>
-              </div>
-              <div className="text-muted">
-                Full recovery{" "}
-                <span className="font-mono text-white/85">
-                  {money(scenario.full_recovery_endpoint, scenario.unit)}
-                </span>
-              </div>
-              <div className="text-muted sm:col-span-2">
-                <span className="font-mono">{scenario.formula}</span>
-              </div>
-              <div className="text-muted sm:col-span-2">
-                {scenario.ramp_label} · {scenario.basis}
-              </div>
+            {/* Context numbers */}
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] font-mono text-muted">
+              <div>Baseline endpoint <span className="text-white/75">{money(scenario.baseline_endpoint, scenario.unit)}</span></div>
+              <div>Full recovery <span className="text-white/75">{money(scenario.full_recovery_endpoint, scenario.unit)}</span></div>
+              <div className="col-span-2 text-[9px] leading-relaxed">{scenario.ramp_label} · {scenario.basis}</div>
             </div>
           </>
         ) : (

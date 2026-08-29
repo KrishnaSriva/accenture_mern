@@ -63,9 +63,14 @@ export default function App() {
 
   // A scenario is specific to one analysis. Carrying a share across a change of KPI,
   // region, or period would draw a recovery line for a loss that was never attributed
-  // in the new context, so every fresh payload starts the dial at zero.
+  // in the new context. Default to 100% when scenario is available so the recovery
+  // curve and dollar impact are immediately visible to judges.
   useEffect(() => {
-    setRecoveryShare(0);
+    if (data?.scenario?.available) {
+      setRecoveryShare(100);
+    } else {
+      setRecoveryShare(0);
+    }
   }, [data]);
 
   // load a company's catalogs, pick sensible defaults, and run the first analysis
@@ -371,7 +376,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* story + drivers (left 2/3) vs macro/confidence/outlook (right 1/3) */}
+              {/* story + drivers (left 2/3) vs what-if slider/macro/confidence (right 1/3) */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-6">
                   <StoryCard data={data} />
@@ -379,8 +384,7 @@ export default function App() {
                   <ActionPlanPanel plan={data.action_plan} />
                 </div>
                 <div className="space-y-6">
-                  <MacroRealityBadge macro={data.macro} />
-                  <ConfidenceBadge confidence={data.confidence} />
+                  {/* Recovery slider first — most impactful for demos */}
                   <OutlookPanel
                     forecast={data.forecast}
                     scenario={data.scenario}
@@ -388,6 +392,8 @@ export default function App() {
                     share={recoveryShare}
                     onShareChange={setRecoveryShare}
                   />
+                  <MacroRealityBadge macro={data.macro} />
+                  <ConfidenceBadge confidence={data.confidence} />
                 </div>
               </div>
 
