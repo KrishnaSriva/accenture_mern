@@ -1,6 +1,6 @@
 # KPI Storytelling Engine
 
-* **Live Site:** [https://accenture-mern-q7g0zsm7u-lalsanjayls-5396s-projects.vercel.app/](https://accenture-mern-q7g0zsm7u-lalsanjayls-5396s-projects.vercel.app/)
+* **Live Site:** [https://accenture-mern.vercel.app/](https://accenture-mern.vercel.app/)
 * **Backend API:** [https://accenture-mern-1.onrender.com/api](https://accenture-mern-1.onrender.com/api)
 
 Detects meaningful KPI changes, finds the likely root cause from structured + unstructured
